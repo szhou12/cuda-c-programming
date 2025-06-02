@@ -5,7 +5,7 @@
 
 
 /**
- * $ nvcc checkDeviceInfor.cu -o checkDeviceInfor
+ * $ nvcc -arch sm_61 checkDeviceInfor.cu -o checkDeviceInfor
  * $ ./checkDeviceInfor
  */
 int main(int argc, char **argv) {
