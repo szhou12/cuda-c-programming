@@ -40,6 +40,27 @@ __global__ void sumArraysOnGPU(float *A, float *B, float *C, const int N) {
 }
 
 
+void checkResult(float *hostRef, float *gpuRef, const int N)
+{
+    double epsilon = 1.0E-8;
+    bool match = 1;
+
+    for (int i = 0; i < N; i++)
+    {
+        if (abs(hostRef[i] - gpuRef[i]) > epsilon)
+        {
+            match = 0;
+            printf("host %f gpu %f\n", hostRef[i], gpuRef[i]);
+            break;
+        }
+    }
+
+    if (match)
+        printf("Arrays match.\n\n");
+    else
+        printf("Arrays do not match.\n\n");
+}
+
 
 /**
  * This program adds two large vectors (arrays) of floats both on the CPU (host) and the GPU (device), 

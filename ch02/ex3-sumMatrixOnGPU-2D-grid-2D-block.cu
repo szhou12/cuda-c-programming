@@ -10,7 +10,7 @@ double cpuSecond() {
 }
 
 
-void initialData(float *ip, int size) 
+void initialData(int *ip, int size) 
 {
     // generate different seed for random number
     time_t t;
@@ -46,7 +46,7 @@ void checkResult(int *hostRef, int *gpuRef, const int N)
 
     for (int i = 0; i < N; i++) {
         if (hostRef[i] != gpuRef[i]) {
-            match = 0
+            match = 0;
             printf("host %d gpu %d\n", hostRef[i], gpuRef[i]);
             break;
         }
@@ -85,8 +85,8 @@ int main(int argc, char **argv)
     CHECK(cudaSetDevice(dev));
 
     // set up data size of matrix
-    int nx = 1 << 14;
-    int ny = 1 << 14;
+    int nx = 1 << 13;
+    int ny = 1 << 13;
 
     int nxy = nx * ny;
     int nBytes = nxy * sizeof(int); // array of int

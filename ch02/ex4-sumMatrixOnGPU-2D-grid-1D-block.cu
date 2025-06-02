@@ -63,7 +63,7 @@ void checkResult(float *hostRef, float *gpuRef, const int N)
 }
 
 // grid 2D block 1D
-__global__ void sumMatrixOnGPU(float *MatA, float *MatB, float *MatC, const int nx, const int ny)
+__global__ void sumMatrixOnGPUMix(float *MatA, float *MatB, float *MatC, const int nx, const int ny)
 {
     unsigned int nxthreads = gridDim.x * blockDim.x;
     unsigned int iy = blockIdx.y;
