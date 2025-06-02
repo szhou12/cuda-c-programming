@@ -3,6 +3,14 @@
 #include <sys/time.h>
 #include "../common/common.h"
 
+
+double cpuSecond() {
+    struct timeval tp;
+    gettimeofday(&tp,NULL);
+    return ((double)tp.tv_sec + (double)tp.tv_usec*1.e-6);
+}
+
+
 void initialData(float *ip, int size) {
     // generate different seed for random number
     time_t t;

@@ -3,7 +3,7 @@
 #include <time.h>
 
 /**
- * nvcc -Xcompiler -std=c99 sumArraysOnHost.c –o sum
+ * nvcc -Xcompiler -std=c99 sumArraysOnHost.c -o sum
  * ./sum
  */
 void sumArraysOnHost(float* A, float* B, float* C, const int N)
