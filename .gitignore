@@ -30,7 +30,6 @@ core.*
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
-Makefile
 build/
 build*/         # sometimes people use build-debug, build-release
 *.cmake

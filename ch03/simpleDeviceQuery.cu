@@ -3,7 +3,7 @@
 #include <math.h>
 #include <cuda_runtime.h>
 #include <sys/time.h>
-#include "../common/common.h"
+#include "common.h"
 
 /*
  * Fetches basic information on the first device in the current CUDA platform,

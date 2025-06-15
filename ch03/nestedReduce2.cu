@@ -1,14 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <cuda_runtime.h>
-#include <sys/time.h>
+
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 #include "common.h"
 
-#define LOG 0
-
 // Recursive Implementation of Interleaved Pair Approach
-int cpuRecursiveReduce(int *data, int const size) {
+int cpuRecursiveReduce(int *data, int const size)
+{
     // stop condition
     if (size == 1) return data[0];
 
@@ -16,30 +16,21 @@ int cpuRecursiveReduce(int *data, int const size) {
     int const stride = size / 2;
 
     // in-place reduction
-    for (int i = 0; i < stride; i++) {
+    for (int i = 0; i < stride; i++)
+    {
         data[i] += data[i + stride];
     }
 
-    // recursive call
+    // call recursively
     return cpuRecursiveReduce(data, stride);
 }
 
 // Neighbored Pair Implementation with divergence
-/**
- * Takes an input array g_idata, performs a sum reduction, and stores the result in g_odata.
- * Example: 4 threads per block
- *      Initial:    [1, 2, 3, 4, 5, 6, 7, 8]
- *                   ----------  ----------
- *                    block 0    block 1
- *      Step 1:     [3, 2, 7, 4, 11, 6, 15, 8]  (stride=1)
- *      Step 2:     [10, 2, 7, 4, 26, 6, 15, 8] (stride=2)
- *      Step 3:     [36, 2, 7, 4, 26, 6, 15, 8] (stride=4)
- * 
- */
-__global__ void reduceNeighbored (int *g_idata, int *g_odata, unsigned int n) {
+__global__ void reduceNeighbored (int *g_idata, int *g_odata, unsigned int n)
+{
     // set thread ID
-    unsigned int tid = threadIdx.x; // thread id within this thread's block
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x; // global index of this thread across all blocks
+    unsigned int tid = threadIdx.x;
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     // convert global data pointer to the local pointer of this block
     int *idata = g_idata + blockIdx.x * blockDim.x;
@@ -48,33 +39,23 @@ __global__ void reduceNeighbored (int *g_idata, int *g_odata, unsigned int n) {
     if (idx >= n) return;
 
     // in-place reduction in global memory
-    for (int stride = 1; stride < blockDim.x; stride *= 2) {
-        if ((tid % (2 * stride)) == 0) {
+    for (int stride = 1; stride < blockDim.x; stride *= 2)
+    {
+        if ((tid % (2 * stride)) == 0)
+        {
             idata[tid] += idata[tid + stride];
         }
 
-        // synchronize within thread block
+        // synchronize within threadblock
         __syncthreads();
     }
 
-    // write the result for this block to global memory
-    it (tid == 0) {
-        g_odata[blockIdx.x] = idata[0];
-    }
+    // write result for this block to global mem
+    if (tid == 0) g_odata[blockIdx.x] = idata[0];
 }
 
-/**
- * 
- * Example: 
- *      Initial:    [1, 2, 3, 4, 5, 6, 7, 8]
- *      Step 1:     1st Call (isize = 8, 8 threads), istride = 8>>1 = 4
- *                  [6, 8, 10, 12, 5, 6, 7, 8]
- *      Step 2:     2nd Call (isize = 4, 4 threads), istride = 4>>1 = 2
- *                  [16, 20, 10, 12, 5, 6, 7, 8]
- *      Step 3:     3rd Call (isize = 2, 2 threads)
- *                  [36, 20, 10, 12, 5, 6, 7, 8]
- */
-__global__ void gpuRecursiveReduce (int *g_idata, int *g_odata, unsigned int isize) {
+__global__ void gpuRecursiveReduce (int *g_idata, int *g_odata, unsigned int isize)
+{
     // set thread ID
     unsigned int tid = threadIdx.x;
 
@@ -83,16 +64,18 @@ __global__ void gpuRecursiveReduce (int *g_idata, int *g_odata, unsigned int isi
     int *odata = &g_odata[blockIdx.x];
 
     // stop condition
-    if (isize == 2 && tid == 0) {
+    if (isize == 2 && tid == 0)
+    {
         g_odata[blockIdx.x] = idata[0] + idata[1];
         return;
     }
 
-    // nested invocation: cut to half
+    // nested invocation
     int istride = isize >> 1;
 
-    if (istride > 1 && tid < istride) {
-        // in-place reduction
+    if(istride > 1 && tid < istride)
+    {
+        // in place reduction
         idata[tid] += idata[tid + istride];
     }
 
@@ -100,7 +83,8 @@ __global__ void gpuRecursiveReduce (int *g_idata, int *g_odata, unsigned int isi
     __syncthreads();
 
     // nested invocation to generate child grids
-    if (tid == 0) {
+    if(tid == 0)
+    {
         gpuRecursiveReduce<<<1, istride>>>(idata, odata, istride);
 
         // sync all child grids launched in this block
@@ -111,7 +95,62 @@ __global__ void gpuRecursiveReduce (int *g_idata, int *g_odata, unsigned int isi
     __syncthreads();
 }
 
-int main(int argc, char **argv) {
+__global__ void gpuRecursiveReduceNosync (int *g_idata, int *g_odata, unsigned int isize)
+{
+    // set thread ID
+    unsigned int tid = threadIdx.x;
+
+    // convert global data pointer to the local pointer of this block
+    int *idata = g_idata + blockIdx.x * blockDim.x;
+    int *odata = &g_odata[blockIdx.x];
+
+    // stop condition
+    if (isize == 2 && tid == 0)
+    {
+        g_odata[blockIdx.x] = idata[0] + idata[1];
+        return;
+    }
+
+    // nested invoke
+    int istride = isize >> 1;
+
+    if(istride > 1 && tid < istride)
+    {
+        idata[tid] += idata[tid + istride];
+
+        if(tid == 0)
+        {
+            gpuRecursiveReduceNosync<<<1, istride>>>(idata, odata, istride);
+        }
+    }
+}
+
+__global__ void gpuRecursiveReduce2(int *g_idata, int *g_odata, int iStride, int const iDim)
+{
+    // convert global data pointer to the local pointer of this block
+    int *idata = g_idata + blockIdx.x * iDim;
+
+    // stop condition
+    if (iStride == 1 && threadIdx.x == 0)
+    {
+        g_odata[blockIdx.x] = idata[0] + idata[1];
+        return;
+    }
+
+    // in place reduction
+    idata[threadIdx.x] += idata[threadIdx.x + iStride];
+
+    // nested invocation to generate child grids
+    if(threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        gpuRecursiveReduce2<<<gridDim.x, iStride / 2>>>(g_idata, g_odata,
+                iStride / 2, iDim);
+    }
+}
+
+// main from here
+int main(int argc, char **argv)
+{
     // set up device
     int dev = 0, gpu_sum;
     cudaDeviceProp deviceProp;
@@ -178,7 +217,8 @@ int main(int argc, char **argv) {
     CHECK(cudaDeviceSynchronize());
     CHECK(cudaGetLastError());
     iElaps = seconds() - iStart;
-    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int),
+                     cudaMemcpyDeviceToHost));
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
@@ -193,12 +233,45 @@ int main(int argc, char **argv) {
     CHECK(cudaDeviceSynchronize());
     CHECK(cudaGetLastError());
     iElaps = seconds() - iStart;
-    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int),
+                     cudaMemcpyDeviceToHost));
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
 
     printf("gpu nested\t\telapsed %f sec gpu_sum: %d <<<grid %d block %d>>>\n",
+           iElaps, gpu_sum, grid.x, block.x);
+
+    // gpu nested reduce kernel without synchronization
+    CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
+    iStart = seconds();
+    gpuRecursiveReduceNosync<<<grid, block>>>(d_idata, d_odata, block.x);
+    CHECK(cudaDeviceSynchronize());
+    CHECK(cudaGetLastError());
+    iElaps = seconds() - iStart;
+    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int),
+                     cudaMemcpyDeviceToHost));
+    gpu_sum = 0;
+
+    for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
+
+    printf("gpu nestedNosyn\t\telapsed %f sec gpu_sum: %d <<<grid %d block "
+           "%d>>>\n", iElaps, gpu_sum, grid.x, block.x);
+
+    CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
+    iStart = seconds();
+    gpuRecursiveReduce2<<<grid, block.x / 2>>>(d_idata, d_odata, block.x / 2,
+            block.x);
+    CHECK(cudaDeviceSynchronize());
+    CHECK(cudaGetLastError());
+    iElaps = seconds() - iStart;
+    CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int),
+                     cudaMemcpyDeviceToHost));
+    gpu_sum = 0;
+
+    for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
+
+    printf("gpu nested2\t\telapsed %f sec gpu_sum: %d <<<grid %d block %d>>>\n",
            iElaps, gpu_sum, grid.x, block.x);
 
     // free host memory

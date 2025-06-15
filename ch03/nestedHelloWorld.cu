@@ -3,7 +3,7 @@
 #include <math.h>
 #include <cuda_runtime.h>
 #include <sys/time.h>
-#include "../common/common.h"
+#include "common.h"
 
 /**
  * $ nvcc -arch=sm_61 -rdc=true nestedHelloWorld.cu -o nestedHelloWorld -lcudadevrt

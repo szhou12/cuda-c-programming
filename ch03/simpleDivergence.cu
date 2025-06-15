@@ -112,7 +112,7 @@ __global__ void warmingup(float* c)
 
 int main(int argc, char** argv)
 {
-    std::chrono::steady_clock::time_point begin;
+    // std::chrono::steady_clock::time_point begin;
 
     // set up device
     int dev = 0;
