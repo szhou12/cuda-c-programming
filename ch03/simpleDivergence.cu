@@ -143,46 +143,46 @@ int main(int argc, char** argv)
     // run a warmup kernel to remove overhead
     CHECK(cudaDeviceSynchronize());
 
-    iStart = cpuSecond();
+    iStart = seconds();
     warmingup << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    iElaps = cpuSecond() - iStart;
+    iElaps = seconds() - iStart;
     printf("- grid.x: %d\n- block.x: %d\n", grid.x, block.x);
     printf("Warming up on GPU: %f ms\n", iElaps * 1000);
 
     CHECK(cudaGetLastError());
 
     // run kernel 1
-    iStart = cpuSecond();
+    iStart = seconds();
     mathKernel1 << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    iElaps = cpuSecond() - iStart;
+    iElaps = seconds() - iStart;
     printf("Running mathKernel1 on GPU: %f ms\n", iElaps * 1000);
 
     CHECK(cudaGetLastError());
 
     // run kernel 2
-    iStart = cpuSecond();
+    iStart = seconds();
     mathKernel2 << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    iElaps = cpuSecond() - iStart;
+    iElaps = seconds() - iStart;
     printf("Running mathKernel2 on GPU: %f ms\n", iElaps * 1000);
     CHECK(cudaGetLastError());
 
     // run kernel 3
-    iStart = cpuSecond();
+    iStart = seconds();
     mathKernel3 << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    iElaps = cpuSecond() - iStart;
+    iElaps = seconds() - iStart;
     printf("Running mathKernel3 on GPU: %f ms\n", iElaps * 1000);
   
     CHECK(cudaGetLastError());
 
     // run kernel 4
-    iStart = cpuSecond();
+    iStart = seconds();
     mathKernel4 << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    iElaps = cpuSecond() - iStart;
+    iElaps = seconds() - iStart;
     printf("Running mathKernel4 on GPU: %f ms\n", iElaps * 1000);
 
     CHECK(cudaGetLastError());
