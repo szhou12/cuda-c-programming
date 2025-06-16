@@ -12,5 +12,8 @@ all: ${CU_APPS}
 %: %.cpp
 	g++ -pthread -I../common -I../tclap-1.4.0-rc1/include -fpermissive -g -o $@ $<
  
+nested%: nested%.cu
+	nvcc -g -G -I./include -I../common -rdc=true -lcudadevrt -o $@ $<
+ 
 clean:
 	rm -f ${CU_APPS}
