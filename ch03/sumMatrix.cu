@@ -59,6 +59,8 @@ __global__ void sumMatrixOnGPU2D(float* A, float* B, float* C, int NX, int NY) {
 
 int main(int argc, char** argv) {
     printf("sumMatrix program starts ...");
+    
+    double iStart, iElaps;
 
     // set up device
     int dev = 0;
