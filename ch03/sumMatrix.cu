@@ -4,7 +4,7 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "../common/common.h"
+#include "common.h"
 
 void initialData(float* ip, const int size) {
     int i;
