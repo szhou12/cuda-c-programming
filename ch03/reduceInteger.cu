@@ -445,8 +445,8 @@ __global__ void reduceUnrollWarps(int* g_idata, int* g_odata, unsigned int n)
 
 int main(int argc, char** argv)
 {
-    std::cout << "reduceInteger program starts ..." << std::endl;
-    std::chrono::steady_clock::time_point begin;
+    printf("reduceInteger program starts ...\n");
+    double iStart, iElaps;
 
     // set up device
     int dev = 0;
@@ -498,151 +498,160 @@ int main(int argc, char** argv)
     CHECK(cudaMalloc((void**)&d_odata, grid.x * sizeof(int)));
 
     // cpu reduction
-    begin = StartTimer();
+    iStart = seconds();
     int cpu_sum = recursiveReduce(tmp, size);
-    std::cout << "recursiveReduce on Host: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
+    iElaps = seconds() - iStart;
+    printf("recursiveReduce on Host: %f ms\n", iElaps * 1000);
 
     // kernel 1: reduceNeighbored
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceNeighbored << <grid, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceNeighbored on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceNeighbored on GPU: %f ms\n", iElaps * 1000);
+
     cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceNeighbored on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceNeighbored on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
 
     // kernel 2: reduceNeighbored with less divergence
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceNeighboredLess << <grid, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceNeighboredLess on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-    
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceNeighboredLess on GPU: %f ms\n", iElaps * 1000);
+    
     cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceNeighboredLess on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceNeighboredLess on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 3: reduceInterleaved
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceInterleaved << <grid, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceInterleaved on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-    
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceInterleaved on GPU: %f ms\n", iElaps * 1000);
+    
     cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceInterleaved on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceInterleaved on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 4: reduceUnrolling2
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceUnrolling2 << <grid.x / 2, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceUnrolling2 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-    
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceUnrolling2 on GPU: %f ms\n", iElaps * 1000);
+    
     cudaMemcpy(h_odata, d_odata, grid.x / 2 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x / 2; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceUnrolling2 on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceUnrolling2 on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 5: reduceUnrolling4
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceUnrolling4 << <grid.x / 4, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceUnrolling4 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceUnrolling4 on GPU: %f ms\n", iElaps * 1000);
+
     cudaMemcpy(h_odata, d_odata, grid.x / 4 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x / 4; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceUnrolling4 on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceUnrolling4 on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 6: reduceUnrolling8
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceUnrolling8 << <grid.x / 8, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceUnrolling8 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceUnrolling8 on GPU: %f ms\n", iElaps * 1000);
+
     cudaMemcpy(h_odata, d_odata, grid.x / 8 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x / 8; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceUnrolling4 on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceUnrolling8 on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 8: reduceUnrollWarps8
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceUnrollWarps8 << <grid.x / 8, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceUnrollWarps8 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceUnrollWarps8 on GPU: %f ms\n", iElaps * 1000);
+
     cudaMemcpy(h_odata, d_odata, grid.x / 8 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x / 8; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceUnrolling8 on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceUnrollWarps8 on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 9: reduceCompleteUnrollWarsp8
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
     reduceCompleteUnrollWarps8 << <grid.x / 8, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceCompleteUnrollWarps8 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceCompleteUnrollWarps8 on GPU: %f ms\n", iElaps * 1000);
+
     cudaMemcpy(h_odata, d_odata, grid.x / 8 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
 
     for (int i = 0; i < grid.x / 8; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceCompleteUnrollWarps8 on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceCompleteUnrollWarps8 on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // kernel 9: reduceCompleteUnroll
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
     CHECK(cudaDeviceSynchronize());
-    begin = StartTimer();
+    iStart = seconds();
 
     switch (blocksize)
     {
@@ -672,7 +681,8 @@ int main(int argc, char** argv)
     }
 
     CHECK(cudaDeviceSynchronize());
-    std::cout << "reduceCompleteUnroll on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
+    iElaps = seconds() - iStart;
+    printf("reduceCompleteUnroll on GPU: %f ms\n", iElaps * 1000);
 
     cudaMemcpy(h_odata, d_odata, grid.x / 8 * sizeof(int), cudaMemcpyDeviceToHost);
     gpu_sum = 0;
@@ -680,7 +690,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < grid.x / 8; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "reduceCompleteUnroll on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceCompleteUnroll on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // free host memory

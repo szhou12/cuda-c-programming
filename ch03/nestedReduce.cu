@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
     iStart = seconds();
     int cpu_sum = cpuRecursiveReduce (tmp, size);
     iElaps = seconds() - iStart;
-    printf("cpu reduce\t\telapsed %f sec cpu_sum: %d\n", iElaps, cpu_sum);
+    printf("cpu reduce\t\telapsed %f ms cpu_sum: %d\n", iElaps*1000, cpu_sum);
 
     // gpu reduceNeighbored
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
@@ -183,8 +183,8 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
 
-    printf("gpu Neighbored\t\telapsed %f sec gpu_sum: %d <<<grid %d block "
-           "%d>>>\n", iElaps, gpu_sum, grid.x, block.x);
+    printf("gpu Neighbored\t\telapsed %f ms gpu_sum: %d <<<grid %d block "
+           "%d>>>\n", iElaps*1000, gpu_sum, grid.x, block.x);
 
     // gpu nested reduce kernel
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
@@ -198,8 +198,8 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
 
-    printf("gpu nested\t\telapsed %f sec gpu_sum: %d <<<grid %d block %d>>>\n",
-           iElaps, gpu_sum, grid.x, block.x);
+    printf("gpu nested\t\telapsed %f ms gpu_sum: %d <<<grid %d block %d>>>\n",
+           iElaps*1000, gpu_sum, grid.x, block.x);
 
     // free host memory
     free(h_idata);

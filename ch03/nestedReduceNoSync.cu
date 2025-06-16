@@ -145,8 +145,8 @@ __global__ void gpuRecursiveReduceNosync(int* g_idata, int* g_odata,
 // main from here
 int main(int argc, char** argv)
 {
-    std::cout << "nestedReduceNoSync program starts ..." << std::endl;
-    std::chrono::steady_clock::time_point begin;
+    printf("nestedReduceNoSync program starts ...\n");
+    double iStart, iElaps;
 
     // set up device
     int dev = 0, gpu_sum;
@@ -200,17 +200,19 @@ int main(int argc, char** argv)
     CHECK(cudaMalloc((void**)&d_odata, grid.x * sizeof(int)));
     
     // cpu recursive reduction
-    begin = StartTimer();
+    iStart = seconds();
     int cpu_sum = cpuRecursiveReduce(tmp, size);
-    std::cout << "cpuRecursiveReduce on Host: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
+    iElaps = seconds() - iStart;
+    printf("cpuRecursiveReduce on Host: %f ms\n", iElaps * 1000);
 
     // gpu reduceNeighbored
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
-    begin = StartTimer();
+    iStart = seconds();
     reduceNeighbored << <grid, block >> > (d_idata, d_odata, size);
-    std::cout << "reduceNeighbored on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("reduceNeighbored on GPU: %f ms\n", iElaps * 1000);
+
     CHECK(cudaGetLastError());
     CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost));
     gpu_sum = 0;
@@ -218,16 +220,17 @@ int main(int argc, char** argv)
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "gpuRecursiveReduce on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("reduceNeighbored on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // gpu nested reduce kernel
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
-    begin = StartTimer();
+    iStart = seconds();
     gpuRecursiveReduce << <grid, block >> > (d_idata, d_odata, block.x);
-    std::cout << "gpuRecursiveReduce on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-    
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("gpuRecursiveReduce on GPU: %f ms\n", iElaps * 1000);
+    
     CHECK(cudaGetLastError());
     CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost));
     gpu_sum = 0;
@@ -235,16 +238,17 @@ int main(int argc, char** argv)
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "gpuRecursiveReduce on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("gpuRecursiveReduce on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // gpu nested reduce kernel without synchronization
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
-    begin = StartTimer();
+    iStart = seconds();
     gpuRecursiveReduceNosync << <grid, block >> > (d_idata, d_odata, block.x);
-    std::cout << "gpuRecursiveReduceNoSync on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    printf("gpuRecursiveReduceNoSync on GPU: %f ms\n", iElaps * 1000);
+
     CHECK(cudaGetLastError());
     CHECK(cudaMemcpy(h_odata, d_odata, grid.x * sizeof(int), cudaMemcpyDeviceToHost));
     gpu_sum = 0;
@@ -252,7 +256,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < grid.x; i++) gpu_sum += h_odata[i];
     bResult = (gpu_sum == cpu_sum);
     if (!bResult) {
-        std::cout << "gpuRecursiveReduceNoSync on GPU FAILED: gpu_sum: " << gpu_sum << " cpu_sum: " << cpu_sum << std::endl;
+        printf("gpuRecursiveReduceNoSync on GPU FAILED: gpu_sum: %d cpu_sum: %d\n", gpu_sum, cpu_sum);
     }
 
     // free host memory
