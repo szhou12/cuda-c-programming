@@ -58,7 +58,7 @@ __global__ void reduceNeighbored (int *g_idata, int *g_odata, unsigned int n) {
     }
 
     // write the result for this block to global memory
-    it (tid == 0) {
+    if (tid == 0) {
         g_odata[blockIdx.x] = idata[0];
     }
 }

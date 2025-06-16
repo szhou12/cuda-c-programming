@@ -112,7 +112,7 @@ __global__ void warmingup(float* c)
 
 int main(int argc, char** argv)
 {
-    // std::chrono::steady_clock::time_point begin;
+    double iStart, iElaps;
 
     // set up device
     int dev = 0;
@@ -143,43 +143,48 @@ int main(int argc, char** argv)
     // run a warmup kernel to remove overhead
     CHECK(cudaDeviceSynchronize());
 
-    begin = StartTimer();
+    iStart = cpuSecond();
     warmingup << <grid, block >> > (d_C);
     CHECK(cudaDeviceSynchronize());
-    std::cout << "- grid.x: " << grid.x << std::endl << "- block.x: " << block.x << std::endl;
-    std::cout << "Warming up on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
+    iElaps = cpuSecond() - iStart;
+    printf("- grid.x: %d\n- block.x: %d\n", grid.x, block.x);
+    printf("Warming up on GPU: %f ms\n", iElaps * 1000);
 
     CHECK(cudaGetLastError());
 
     // run kernel 1
-    begin = StartTimer();
+    iStart = cpuSecond();
     mathKernel1 << <grid, block >> > (d_C);
-    std::cout << "Running mathKernel1 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = cpuSecond() - iStart;
+    printf("Running mathKernel1 on GPU: %f ms\n", iElaps * 1000);
+
     CHECK(cudaGetLastError());
 
     // run kernel 2
-    begin = StartTimer();
+    iStart = cpuSecond();
     mathKernel2 << <grid, block >> > (d_C);
-    std::cout << "Running mathKernel2 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
     CHECK(cudaDeviceSynchronize());
+    iElaps = cpuSecond() - iStart;
+    printf("Running mathKernel2 on GPU: %f ms\n", iElaps * 1000);
     CHECK(cudaGetLastError());
 
     // run kernel 3
-    begin = StartTimer();
+    iStart = cpuSecond();
     mathKernel3 << <grid, block >> > (d_C);
-    std::cout << "Running mathKernel3 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-  
     CHECK(cudaDeviceSynchronize());
+    iElaps = cpuSecond() - iStart;
+    printf("Running mathKernel3 on GPU: %f ms\n", iElaps * 1000);
+  
     CHECK(cudaGetLastError());
 
     // run kernel 4
-    begin = StartTimer();
+    iStart = cpuSecond();
     mathKernel4 << <grid, block >> > (d_C);
-    std::cout << "Running mathKernel4 on GPU: " << GetDurationInMicroSeconds(begin, StopTimer()) << " mcs" << std::endl;
-
     CHECK(cudaDeviceSynchronize());
+    iElaps = cpuSecond() - iStart;
+    printf("Running mathKernel4 on GPU: %f ms\n", iElaps * 1000);
+
     CHECK(cudaGetLastError());
 
     // free gpu memory and reset divece
